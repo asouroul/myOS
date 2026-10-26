@@ -12,6 +12,9 @@
 #error "This tutorial needs to be compiled with a ix86-elf compiler"
 #endif
 
+int ansi_state = 0;
+int ansi_value = 0;
+
 /* Hardware text mode color constants. */
 enum vga_color {
 	VGA_COLOR_BLACK = 0,
@@ -104,23 +107,69 @@ void terminal_scroll(void) {
 
 void terminal_putchar(char c) 
 {   
-    if (c == '\n') {
-        terminal_column = 0;
-        if (++terminal_row == 25) {
-            terminal_scroll();
-            terminal_row = 24;
-        }
-        return ;
-    }
+  if (ansi_state == 0) {
+      if (c == '\033') {ansi_state = 1; return;}
+        
+      if (c == '\n') {
+          terminal_column = 0;
+          if (++terminal_row == 25) {
+              terminal_scroll();
+              terminal_row = VGA_HEIGHT - 1;
+          }
+          return ;
+      }
 
 	terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
 	if (++terminal_column == VGA_WIDTH) {
 		terminal_column = 0;
-		if (++terminal_row == VGA_HEIGHT)
+		if (++terminal_row == VGA_HEIGHT) {
             terminal_scroll();
 			terminal_row = 24;
-	}
+        }
+  	}
+  }
+  /* State 1: Saw ESC */
+  else if (ansi_state == 1) {
+      if (c == '[') { ansi_state = 2; ansi_value = 0; return; } /* return after '[' */
+      else {ansi_state = 0;}
+  }
+  /* State 2: REading command and numbers */
+  if (ansi_state == 2) {
+      if (c >= '0' && c <= '9') {
+          ansi_value = ansi_value * 10 + (c - '0');
+      }
+      else if (c == 'm') {
+          /* Color command */
+          if (ansi_value == 0) {
+                terminal_setcolor(vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK));
+          } else if (ansi_value >= 30 && ansi_value <= 37) {
+                const uint8_t ansi_to_vga[] = {0, 4, 2, 6, 1, 5, 3, 7};
+                terminal_setcolor(vga_entry_color(ansi_to_vga[ansi_value - 30], VGA_COLOR_BLACK));
+          } else if (ansi_value >= 90 && ansi_value <= 97) {
+                const uint8_t ansi_to_vga_bright[] = {8, 12, 10, 14, 9, 13, 11, 15};
+                terminal_setcolor(vga_entry_color(ansi_to_vga_bright[ansi_value - 90], VGA_COLOR_BLACK));
+          }
+          ansi_state = 0;
+      }
+      else if (c == 'J') {
+            /* Clear Screen Command */
+            if (ansi_value == 2) {
+                for (size_t y = 0; y < VGA_HEIGHT; y++) {
+                    for (size_t x = 0; x < VGA_WIDTH; x++) {
+                        terminal_putentryat(' ', terminal_color, x, y);
+                    }
+                }
+                terminal_column = 0;
+                terminal_row = 0;
+            }
+            ansi_state = 0;
+        }
+        else {
+            ansi_state = 0; /* Unknown command, abort */
+        }
+  }
 }
+
 
 void terminal_write(const char* data, size_t size) 
 {
@@ -156,4 +205,15 @@ void kernel_main(void)
     terminal_writestring("New Line!\n");
     terminal_writestring("And another one! :O\n");
     terminal_write_status(" OK ", VGA_COLOR_CYAN);
+    terminal_writestring("\n");
+
+    /* Wipe the screen completely */
+    terminal_writestring("\033[2J");
+
+    /* Test the bright and standard colors */
+    terminal_writestring("\033[96m=== MyOS Boot Sequence ===\033[0m\n\n");
+    terminal_writestring("\033[32m[ OK ]\033[0m Base System Loaded\n");
+    terminal_writestring("\033[33m[WARN]\033[0m Keyboard not detected\n");
+    terminal_writestring("\033[91m[FAIL]\033[0m Network disconnected\n\n");
+    terminal_writestring("\033[97mWaiting for input...\033[0m\n");
 }

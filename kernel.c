@@ -133,6 +133,19 @@ void terminal_writestring(const char* data)
 	terminal_write(data, strlen(data));
 }
 
+void terminal_write_status(const char* tag, enum vga_color color) {
+    terminal_writestring("[ ");
+    /* Save current normal text color to memory */
+    uint8_t old_color = terminal_color;
+    /* Choosing a color */
+    terminal_setcolor(vga_entry_color(color, VGA_COLOR_BLACK));
+    
+    terminal_writestring(tag);
+    terminal_setcolor(old_color);
+    terminal_writestring(" ]");
+}
+
+
 void kernel_main(void) 
 {
 	/* Initialize terminal interface */
@@ -142,6 +155,5 @@ void kernel_main(void)
 	terminal_writestring("Hello, kernel World!\n");
     terminal_writestring("New Line!\n");
     terminal_writestring("And another one! :O\n");
-    for (size_t i = 0; i < 22; i++)
-        terminal_writestring("Added scrolling!\n");
+    terminal_write_status(" OK ", VGA_COLOR_CYAN);
 }

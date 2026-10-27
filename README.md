@@ -23,7 +23,8 @@ ISL
  - **16-Color Palette Support**: Translates standard ANSI color codes (`\033[3Xm`) into VGA hardware signals.
  - **Screen Wiping**: Supports the `\033[2J` clear-screen ANSI command.
 * **Automated Build System**: Fully integrated Makefile for dependency tracking and instant QEMU emulation.
-
+* **Global Constructor Support**: Full System V ABI compliance via `crti`/`crtn` integration, 
+allowing the kernel to safely execute advanced C initialization scripts and C++ global objects before `kernel_main` runs.
 
 
 

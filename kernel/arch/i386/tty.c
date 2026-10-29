@@ -2,6 +2,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <kernel/tty.h>
+#include "kernel/vga.h"
+
 /* Check if the compiler thinks you are targeting the wrong operating system. */
 #if defined(__linux__)
 #error "You are not using a cross-compiler, you will most certainly run into trouble"
@@ -15,35 +18,6 @@
 int ansi_state = 0;
 int ansi_value = 0;
 
-/* Hardware text mode color constants. */
-enum vga_color {
-	VGA_COLOR_BLACK = 0,
-	VGA_COLOR_BLUE = 1,
-	VGA_COLOR_GREEN = 2,
-	VGA_COLOR_CYAN = 3,
-	VGA_COLOR_RED = 4,
-	VGA_COLOR_MAGENTA = 5,
-	VGA_COLOR_BROWN = 6,
-	VGA_COLOR_LIGHT_GREY = 7,
-	VGA_COLOR_DARK_GREY = 8,
-	VGA_COLOR_LIGHT_BLUE = 9,
-	VGA_COLOR_LIGHT_GREEN = 10,
-	VGA_COLOR_LIGHT_CYAN = 11,
-	VGA_COLOR_LIGHT_RED = 12,
-	VGA_COLOR_LIGHT_MAGENTA = 13,
-	VGA_COLOR_LIGHT_BROWN = 14,
-	VGA_COLOR_WHITE = 15,
-};
-
-static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg) 
-{
-	return fg | bg << 4;
-}
-
-static inline uint16_t vga_entry(unsigned char uc, uint8_t color) 
-{
-	return (uint16_t) uc | (uint16_t) color << 8;
-}
 
 size_t strlen(const char* str) 
 {
@@ -182,7 +156,7 @@ void terminal_writestring(const char* data)
 	terminal_write(data, strlen(data));
 }
 
-void terminal_write_status(const char* tag, enum vga_color color) {
+void terminal_write_status(const char* tag, uint8_t color) {
     terminal_writestring("[ ");
     /* Save current normal text color to memory */
     uint8_t old_color = terminal_color;
@@ -194,26 +168,3 @@ void terminal_write_status(const char* tag, enum vga_color color) {
     terminal_writestring(" ]");
 }
 
-
-void kernel_main(void) 
-{
-	/* Initialize terminal interface */
-	terminal_initialize();
-
-	/* Newline support is left as an exercise. */
-	terminal_writestring("Hello, kernel World!\n");
-    terminal_writestring("New Line!\n");
-    terminal_writestring("And another one! :O\n");
-    terminal_write_status(" OK ", VGA_COLOR_CYAN);
-    terminal_writestring("\n");
-
-    /* Wipe the screen completely */
-    terminal_writestring("\033[2J");
-
-    /* Test the bright and standard colors */
-    terminal_writestring("\033[96m=== MyOS Boot Sequence ===\033[0m\n\n");
-    terminal_writestring("\033[32m[ OK ]\033[0m Base System Loaded\n");
-    terminal_writestring("\033[33m[WARN]\033[0m Keyboard not detected\n");
-    terminal_writestring("\033[91m[FAIL]\033[0m Network disconnected\n\n");
-    terminal_writestring("\033[97mWaiting for input...\033[0m\n");
-}

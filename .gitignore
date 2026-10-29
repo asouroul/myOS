@@ -1,11 +1,5 @@
-# Compiled Object files
 *.o
-
-# OS Executables and Images
-myos
+*.d
 *.iso
 isodir/
-
-# Editor swap files
-.*.swp
-
+sysroot/
